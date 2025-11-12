@@ -1,7 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './PropertiesPanel.css';
+import {
+  rebuildBoxGeometry,
+  rebuildSphereGeometry,
+  rebuildCylinderGeometry,
+} from '../utils/shapeUtils';
 
 export default function PropertiesPanel({ selectedEntity, selectedType }) {
+  const [tick, setTick] = useState(0); // force local re-render after in-place geometry updates
+
+  const parsePositive = (value, fallback) => {
+    const v = parseFloat(value);
+    return Number.isFinite(v) && v > 0 ? v : fallback;
+  };
+
+  const applyBoxDims = (entity, next) => {
+    const dims = entity.userData.dimensions || {
+      width: 1,
+      height: 1,
+      depth: 1,
+    };
+    const width = next.width ?? dims.width;
+    const height = next.height ?? dims.height;
+    const depth = next.depth ?? dims.depth;
+    rebuildBoxGeometry(entity, width, height, depth);
+    setTick((t) => t + 1);
+  };
+
+  const applySphereRadius = (entity, radius) => {
+    rebuildSphereGeometry(entity, radius);
+    setTick((t) => t + 1);
+  };
+
+  const applyCylinderDims = (entity, next) => {
+    const radius = next.radius ?? selectedEntity.userData.radius ?? 0.5;
+    const height = next.height ?? selectedEntity.userData.height ?? 1;
+    rebuildCylinderGeometry(entity, radius, height);
+    setTick((t) => t + 1);
+  };
+
   if (!selectedEntity) {
     return (
       <div className='properties-panel'>
@@ -45,6 +82,107 @@ export default function PropertiesPanel({ selectedEntity, selectedType }) {
           <h4>Type</h4>
           <p>{typeInfo}</p>
         </div>
+
+        {entity.userData.type === 'box' && (
+          <div className='property-group'>
+            <h4>Dimensions</h4>
+            <div className='property-row'>
+              <label>Width</label>
+              <input
+                type='number'
+                min='0.01'
+                step='0.01'
+                value={entity.userData.dimensions?.width ?? 1}
+                onChange={(e) =>
+                  applyBoxDims(entity, {
+                    width: parsePositive(e.target.value, 1),
+                  })
+                }
+              />
+            </div>
+            <div className='property-row'>
+              <label>Height</label>
+              <input
+                type='number'
+                min='0.01'
+                step='0.01'
+                value={entity.userData.dimensions?.height ?? 1}
+                onChange={(e) =>
+                  applyBoxDims(entity, {
+                    height: parsePositive(e.target.value, 1),
+                  })
+                }
+              />
+            </div>
+            <div className='property-row'>
+              <label>Depth</label>
+              <input
+                type='number'
+                min='0.01'
+                step='0.01'
+                value={entity.userData.dimensions?.depth ?? 1}
+                onChange={(e) =>
+                  applyBoxDims(entity, {
+                    depth: parsePositive(e.target.value, 1),
+                  })
+                }
+              />
+            </div>
+          </div>
+        )}
+
+        {entity.userData.type === 'sphere' && (
+          <div className='property-group'>
+            <h4>Radius</h4>
+            <div className='property-row'>
+              <label>Radius</label>
+              <input
+                type='number'
+                min='0.01'
+                step='0.01'
+                value={entity.userData.radius ?? 0.7}
+                onChange={(e) =>
+                  applySphereRadius(entity, parsePositive(e.target.value, 0.7))
+                }
+              />
+            </div>
+          </div>
+        )}
+
+        {entity.userData.type === 'cylinder' && (
+          <div className='property-group'>
+            <h4>Dimensions</h4>
+            <div className='property-row'>
+              <label>Radius</label>
+              <input
+                type='number'
+                min='0.01'
+                step='0.01'
+                value={entity.userData.radius ?? 0.5}
+                onChange={(e) =>
+                  applyCylinderDims(entity, {
+                    radius: parsePositive(e.target.value, 0.5),
+                  })
+                }
+              />
+            </div>
+            <div className='property-row'>
+              <label>Height</label>
+              <input
+                type='number'
+                min='0.01'
+                step='0.01'
+                value={entity.userData.height ?? 1}
+                onChange={(e) =>
+                  applyCylinderDims(entity, {
+                    height: parsePositive(e.target.value, 1),
+                  })
+                }
+              />
+            </div>
+          </div>
+        )}
+
         <div className='property-group'>
           <h4>Position</h4>
           <div className='property-row'>

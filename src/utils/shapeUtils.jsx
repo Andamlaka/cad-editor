@@ -211,3 +211,38 @@ export function updateShapeGeometry(shape) {
   shape.userData.faces = createFacesFromGeometry(shape.geometry);
   shape.userData.edges = createEdgesFromGeometry(shape.geometry);
 }
+
+// Geometry rebuild helpers for interactive resizing
+export function rebuildBoxGeometry(mesh, width, height, depth) {
+  if (!mesh || mesh.userData.type !== 'box') return;
+  const w = Math.max(0.001, width);
+  const h = Math.max(0.001, height);
+  const d = Math.max(0.001, depth);
+  const oldGeo = mesh.geometry;
+  mesh.geometry = new THREE.BoxGeometry(w, h, d);
+  if (oldGeo) oldGeo.dispose();
+  mesh.userData.dimensions = { width: w, height: h, depth: d };
+  updateShapeGeometry(mesh);
+}
+
+export function rebuildSphereGeometry(mesh, radius, segments = 32) {
+  if (!mesh || mesh.userData.type !== 'sphere') return;
+  const r = Math.max(0.001, radius);
+  const oldGeo = mesh.geometry;
+  mesh.geometry = new THREE.SphereGeometry(r, segments, segments);
+  if (oldGeo) oldGeo.dispose();
+  mesh.userData.radius = r;
+  updateShapeGeometry(mesh);
+}
+
+export function rebuildCylinderGeometry(mesh, radius, height, segments = 32) {
+  if (!mesh || mesh.userData.type !== 'cylinder') return;
+  const r = Math.max(0.001, radius);
+  const h = Math.max(0.001, height);
+  const oldGeo = mesh.geometry;
+  mesh.geometry = new THREE.CylinderGeometry(r, r, h, segments);
+  if (oldGeo) oldGeo.dispose();
+  mesh.userData.radius = r;
+  mesh.userData.height = h;
+  updateShapeGeometry(mesh);
+}

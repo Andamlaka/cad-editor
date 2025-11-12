@@ -5,6 +5,9 @@ import {
   createSphere,
   createCylinder,
   updateShapeGeometry,
+  rebuildBoxGeometry,
+  rebuildSphereGeometry,
+  rebuildCylinderGeometry,
 } from '../utils/shapeUtils';
 import { saveSceneToJSON, loadSceneFromJSON } from '../utils/ioUtils';
 
@@ -53,6 +56,7 @@ export default function ThreeCanvas() {
   const redoStackRef = useRef([]);
   const multiSelectedRef = useRef(new Set());
   const multiHighlightsRef = useRef(new Map());
+  const creationStateRef = useRef(null); // { type, start: THREE.Vector3, shape: THREE.Mesh }
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -497,12 +501,45 @@ export default function ThreeCanvas() {
         if (pos) {
           const shapeType = pendingShapeTypeRef.current;
           pendingShapeTypeRef.current = null; // Clear immediately
-          createShapeAtPosition(shapeType, pos);
-          return; // Don't do selection when placing shape
-        } else {
-          // If we can't get position, clear pending shape
-          pendingShapeTypeRef.current = null;
+
+          // Begin interactive creation: create minimal shape and drag to size
+          let shape = null;
+          if (shapeType === 'box') {
+            shape = createBox(0.01, 1, 0.01);
+            shape.position.set(pos.x, 0.5, pos.z);
+          } else if (shapeType === 'sphere') {
+            shape = createSphere(0.01);
+            shape.position.set(pos.x, 0.01, pos.z);
+          } else if (shapeType === 'cylinder') {
+            shape = createCylinder(0.01, 1);
+            shape.position.set(pos.x, 0.5, pos.z);
+          } else {
+            return;
+          }
+          scene.add(shape);
+          objectsRef.current.push(shape);
+
+          // Set selection to the new shape
+          setSelectedEntity(shape);
+          setSelectedType('shape');
+          selectedEntityRef.current = shape;
+          selectedTypeRef.current = 'shape';
+
+          // Enter creation drag state
+          creationStateRef.current = {
+            type: shapeType,
+            start: pos.clone(),
+            shape,
+            phase: 'base',
+            startClientY: null,
+            initialHeight: null,
+          };
+          isDraggingRef.current = true;
+
+          return; // Don't do normal selection when starting creation
         }
+        // If cannot find a plane position, clear pending
+        pendingShapeTypeRef.current = null;
       }
 
       const rect = renderer.domElement.getBoundingClientRect();
@@ -687,64 +724,6 @@ export default function ThreeCanvas() {
       // Set pending shape type - user will click on canvas to place it
       pendingShapeTypeRef.current = type;
       console.log('Shape creation mode activated:', type);
-    }
-
-    // Create shape at specific position
-    function createShapeAtPosition(type, position) {
-      console.log('Creating shape:', type, 'at position:', position);
-      let shape;
-      switch (type) {
-        case 'box':
-          shape = createBox();
-          break;
-        case 'sphere':
-          shape = createSphere();
-          break;
-        case 'cylinder':
-          shape = createCylinder();
-          break;
-        default:
-          console.error('Unknown shape type:', type);
-          return null;
-      }
-
-      if (!shape) {
-        console.error('Failed to create shape');
-        return null;
-      }
-
-      // Position the shape on the ground plane
-      // Calculate proper Y position based on shape height
-      let yPos = 0.5;
-      if (type === 'box') {
-        yPos = 0.5; // Box height is 1, so center at 0.5
-      } else if (type === 'sphere') {
-        yPos = 0.7; // Sphere radius
-      } else if (type === 'cylinder') {
-        yPos = 0.5; // Cylinder height is 1, so center at 0.5
-      }
-
-      shape.position.set(position.x, yPos, position.z);
-      console.log('Shape positioned at:', shape.position);
-
-      scene.add(shape);
-      objectsRef.current.push(shape);
-      console.log(
-        'Shape added to scene. Total objects:',
-        objectsRef.current.length
-      );
-
-      // Update selection
-      setSelectedEntity(shape);
-      setSelectedType('shape');
-      highlightEntity(shape, 'shape');
-      window.dispatchEvent(
-        new CustomEvent('selectionChanged', {
-          detail: { entity: shape, type: 'shape' },
-        })
-      );
-
-      return shape;
     }
 
     // Sketch handlers
@@ -1130,6 +1109,75 @@ export default function ThreeCanvas() {
     };
 
     const handlePointerMove = (event) => {
+      // Interactive creation drag: update dimensions as mouse moves
+      if (creationStateRef.current) {
+        const state = creationStateRef.current;
+        const shape = state.shape;
+        if (!shape) return;
+
+        if (state.phase === 'base') {
+          const pos = getMouseOnPlane(event);
+          if (!pos) return;
+          const start = state.start;
+
+          if (state.type === 'box') {
+            const width = Math.max(0.01, Math.abs(pos.x - start.x));
+            const depth = Math.max(0.01, Math.abs(pos.z - start.z));
+            const height = shape.userData?.dimensions?.height ?? 1;
+            // Rebuild geometry
+            rebuildBoxGeometry(shape, width, height, depth);
+            // Center between start and current on XZ; Y = height/2
+            shape.position.set(
+              (pos.x + start.x) / 2,
+              height / 2,
+              (pos.z + start.z) / 2
+            );
+          } else if (state.type === 'sphere') {
+            const dx = pos.x - start.x;
+            const dz = pos.z - start.z;
+            const radius = Math.max(0.01, Math.hypot(dx, dz));
+            rebuildSphereGeometry(shape, radius);
+            // Keep center on ground plane XZ at start point; Y = radius
+            shape.position.set(start.x, radius, start.z);
+          } else if (state.type === 'cylinder') {
+            const dx = pos.x - start.x;
+            const dz = pos.z - start.z;
+            const radius = Math.max(0.01, Math.hypot(dx, dz));
+            const height = shape.userData?.height ?? 1;
+            rebuildCylinderGeometry(shape, radius, height);
+            // Keep center XZ at start; Y = height/2
+            shape.position.set(start.x, height / 2, start.z);
+          }
+        } else if (state.phase === 'height') {
+          // Mouse vertical movement controls height for box/cylinder
+          const dy = state.startClientY - event.clientY; // up increases height
+          const delta = dy * 0.02; // sensitivity
+          if (state.type === 'box') {
+            const dims = shape.userData?.dimensions || {
+              width: 1,
+              height: 1,
+              depth: 1,
+            };
+            const width = dims.width;
+            const depth = dims.depth;
+            const height = Math.max(
+              0.01,
+              (state.initialHeight ?? dims.height ?? 1) + delta
+            );
+            rebuildBoxGeometry(shape, width, height, depth);
+            shape.position.set(shape.position.x, height / 2, shape.position.z);
+          } else if (state.type === 'cylinder') {
+            const radius = shape.userData?.radius ?? 0.5;
+            const baseHeight =
+              state.initialHeight ?? shape.userData?.height ?? 1;
+            const height = Math.max(0.01, baseHeight + delta);
+            rebuildCylinderGeometry(shape, radius, height);
+            shape.position.set(shape.position.x, height / 2, shape.position.z);
+          }
+        }
+        return;
+      }
+
       // Perform transform drag if active
       if (isTransformDraggingRef.current && selectedEntityRef.current) {
         const target = transformEntityRef.current || selectedEntityRef.current;
@@ -1176,6 +1224,49 @@ export default function ThreeCanvas() {
     };
 
     const handlePointerUp = (event) => {
+      // Finalize/advance creation if in creation mode
+      if (creationStateRef.current) {
+        const state = creationStateRef.current;
+        const shape = state.shape;
+        if (!shape) {
+          creationStateRef.current = null;
+          isDraggingRef.current = false;
+          return;
+        }
+        if (state.type === 'sphere') {
+          // Spheres are single-phase
+          creationStateRef.current = null;
+          isDraggingRef.current = false;
+          if (selectedEntityRef.current) {
+            highlightEntity(selectedEntityRef.current, 'shape');
+          }
+          pushHistory();
+          return;
+        }
+        if (state.phase === 'base') {
+          // Move to height phase for box/cylinder
+          creationStateRef.current = {
+            ...state,
+            phase: 'height',
+            startClientY: event.clientY,
+            initialHeight:
+              state.type === 'box'
+                ? shape.userData?.dimensions?.height ?? 1
+                : shape.userData?.height ?? 1,
+          };
+          isDraggingRef.current = true;
+          return;
+        } else {
+          // Finish height phase
+          creationStateRef.current = null;
+          isDraggingRef.current = false;
+          if (selectedEntityRef.current) {
+            highlightEntity(selectedEntityRef.current, 'shape');
+          }
+          pushHistory();
+          return;
+        }
+      }
       if (isTransformDraggingRef.current) {
         isTransformDraggingRef.current = false;
         transformEntityRef.current = null;
