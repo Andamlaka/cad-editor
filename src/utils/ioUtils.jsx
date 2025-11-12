@@ -142,10 +142,11 @@ export function loadSceneFromJSON(data, scene, objectsRef, sketchesRef) {
       let shape;
 
       switch (objData.type) {
-        case 'box':
+        case 'box': {
           const dims = objData.dimensions || { width: 1, height: 1, depth: 1 };
           shape = createBox(dims.width, dims.height, dims.depth);
           break;
+        }
         case 'sphere':
           shape = createSphere(objData.radius || 0.7);
           break;

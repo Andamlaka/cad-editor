@@ -5,8 +5,9 @@
   right: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
-  padding: 12px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
   background: rgba(45, 45, 45, 0.95);
   border-bottom: 1px solid #444;
   z-index: 100;
@@ -16,12 +17,12 @@
 .control-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .control-section h3 {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #aaa;
   text-transform: uppercase;
@@ -31,6 +32,7 @@
 .button-group {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 button {
@@ -76,14 +78,20 @@ button:hover {
 }
 
 .help-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   font-size: 11px;
   color: #aaa;
-  line-height: 1.6;
-  max-width: 200px;
+  line-height: 1.4;
+  max-width: none;
 }
 
 .help-text p {
-  margin: 4px 0;
+  margin: 0;
+  display: inline;
+  margin-right: 10px;
 }
 
 .help-text strong {
