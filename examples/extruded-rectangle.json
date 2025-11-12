@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "objects": [
+    {
+      "id": 0,
+      "type": "extruded",
+      "position": { "x": 0, "y": 1.25, "z": 0 },
+      "rotation": { "x": 0, "y": 0.2, "z": 0 },
+      "scale": { "x": 1, "y": 1, "z": 1 },
+      "material": { "color": 43775 },
+      "extrusionHeight": 2.5,
+      "sketchData": {
+        "type": "rectangle",
+        "width": 2,
+        "height": 1.5,
+        "center": { "x": 0, "y": 0, "z": 0 }
+      }
+    }
+  ],
+  "sketches": []
+}

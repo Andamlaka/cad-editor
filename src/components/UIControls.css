@@ -1,0 +1,91 @@
+.ui-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 12px;
+  background: rgba(45, 45, 45, 0.95);
+  border-bottom: 1px solid #444;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.control-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-section h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.button-group {
+  display: flex;
+  gap: 6px;
+}
+
+button {
+  background: #3a3a3a;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+button:hover {
+  background: #4a4a4a;
+  border-color: #666;
+}
+
+.btn-primary {
+  background: #2194ce;
+  border-color: #2194ce;
+}
+
+.btn-primary:hover {
+  background: #2ba4de;
+  border-color: #2ba4de;
+}
+
+.btn-secondary {
+  background: #3a3a3a;
+}
+
+.btn-active {
+  background: #ffaa00;
+  border-color: #ffaa00;
+  color: #000;
+}
+
+.btn-active:hover {
+  background: #ffbb22;
+  border-color: #ffbb22;
+}
+
+.help-text {
+  font-size: 11px;
+  color: #aaa;
+  line-height: 1.6;
+  max-width: 200px;
+}
+
+.help-text p {
+  margin: 4px 0;
+}
+
+.help-text strong {
+  color: #fff;
+}
